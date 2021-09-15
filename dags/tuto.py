@@ -36,6 +36,10 @@ TICKERS = [
     {
         'symbol': 'DIS',
         'name': 'Disney'
+    },
+    {
+        'symbol': 'XP',
+        'name': 'XP'
     }
 ]
 
