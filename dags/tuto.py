@@ -58,7 +58,9 @@ def get_ticker_value(**kwargs):
 
     to_python = json.loads(response.text)
 
-    print(to_python['quoteResponse']['result'][0]['postMarketPrice'])
+    task_instance = kwargs['task_instance']
+
+    task_instance.xcom_push('response', to_python)
 
 task = {}
 
@@ -69,6 +71,7 @@ for ticker in TICKERS:
         task_id='get_ticker_value_' + symbol,
         python_callable=get_ticker_value,
         op_kwargs={'symbol': symbol},
+        provide_context=True,
         dag=dag
     )
 
