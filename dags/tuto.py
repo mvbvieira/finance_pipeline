@@ -7,6 +7,7 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.operators.python_operator import PythonOperator
 from airflow.models import Variable
 from datetime import datetime, timedelta
+import pandas as pd
 import requests
 import json
 
@@ -37,10 +38,10 @@ TICKERS = [
         'symbol': 'DIS',
         'name': 'Disney'
     },
-    {
-        'symbol': 'XP',
-        'name': 'XP'
-    }
+    # {
+    #     'symbol': 'XP',
+    #     'name': 'XP'
+    # }
 ]
 
 def get_ticker_value(**kwargs):
@@ -62,7 +63,36 @@ def get_ticker_value(**kwargs):
 
     task_instance.xcom_push('response', to_python)
 
+def save_on_file(**kwargs):
+    ticker = kwargs['symbol']
+    data = kwargs['task_instance'].xcom_pull(task_ids='get_ticker_value_' + ticker, key='response')
+    
+    print(data)
+    file_path = '/usr/local/airflow/data/{}/{}.json'.format(ticker, datetime.now().strftime('%Y-%m-%d'))
+
+    print(file_path)
+
+    with open(file_path, 'w') as f:
+        json.dump(data, f, ensure_ascii=False)
+
+def run_etl(**kwargs):
+    file_path = '/usr/local/airflow/data/*/*'
+
+    df = pd.read_json(file_path)
+
+    task_instance = kwargs['task_instance']
+
+    task_instance.xcom_push('response', df)
+
 task = {}
+save_file = {}
+
+run_etls = PythonOperator(
+    task_id='run_etls',
+    python_callable=run_etl,
+    provide_context=True,
+    dag=dag
+)
 
 for ticker in TICKERS:
     symbol = ticker['symbol']
@@ -75,4 +105,13 @@ for ticker in TICKERS:
         dag=dag
     )
 
-    task[symbol]
+    save_file[symbol] = PythonOperator(
+        task_id='save_on_file_' + symbol,
+        python_callable=save_on_file,
+        op_kwargs={'symbol': symbol},
+        provide_context=True,
+        dag=dag
+    )
+
+    task[symbol] >> save_file[symbol]
+    save_file[symbol] >> run_etls
