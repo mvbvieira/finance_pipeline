@@ -10,6 +10,9 @@ from datetime import datetime, timedelta
 import pandas as pd
 import requests
 import json
+import psycopg2
+import os
+from sqlalchemy import create_engine
 
 
 default_args = {
@@ -67,22 +70,25 @@ def save_on_file(**kwargs):
     ticker = kwargs['symbol']
     data = kwargs['task_instance'].xcom_pull(task_ids='get_ticker_value_' + ticker, key='response')
     
-    print(data)
+    print(data['quoteResponse']['result'])
     file_path = '/usr/local/airflow/data/{}/{}.json'.format(ticker, datetime.now().strftime('%Y-%m-%d'))
 
     print(file_path)
 
     with open(file_path, 'w') as f:
-        json.dump(data, f, ensure_ascii=False)
+        json.dump(data['quoteResponse']['result'], f, ensure_ascii=False)
 
 def run_etl(**kwargs):
-    file_path = '/usr/local/airflow/data/*/*'
+    print("Rodando ETL")
+    file_path = os.path.abspath(os.getcwd()) + '/data/TSLA/2021-10-07.json'
 
     df = pd.read_json(file_path)
 
-    task_instance = kwargs['task_instance']
+    df2 = df[["symbol", "priceToSales"]]
 
-    task_instance.xcom_push('response', df)
+    engine = create_engine('postgresql://airflow:airflow@postgres:5432/airflow')
+    df2.to_sql('tickers', engine, if_exists='append')
+
 
 task = {}
 save_file = {}
