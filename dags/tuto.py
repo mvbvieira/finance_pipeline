@@ -59,13 +59,14 @@ def save_current_date(**kwargs):
     task_instance.xcom_push('date', current_date)
 
 def get_ticker_value(**kwargs):
+    rapidapi_token = Variable.get('rapidapi_key', '')
     url = "https://apidojo-yahoo-finance-v1.p.rapidapi.com/market/v2/get-quotes"
 
     querystring = {"region":"US","symbols":kwargs['symbol']}
 
     headers = {
         'x-rapidapi-host': "apidojo-yahoo-finance-v1.p.rapidapi.com",
-        'x-rapidapi-key': "5f6d8bca03msh0af0147edb4e25fp17865fjsneddfc6257ab1"
+        'x-rapidapi-key': rapidapi_token
         }
 
     response = requests.request("GET", url, headers=headers, params=querystring)
