@@ -4,7 +4,8 @@ http://airflow.readthedocs.org/en/latest/tutorial.html
 """
 from airflow import DAG
 from airflow.operators.bash_operator import BashOperator
-from airflow.operators.python_operator import PythonOperator
+from airflow.operators.python_operator import PythonOperator, BranchPythonOperator
+from airflow.operators.dummy_operator import DummyOperator
 from airflow.models import Variable
 from datetime import datetime, timedelta
 import pandas as pd
@@ -13,6 +14,8 @@ import json
 import psycopg2
 import os
 from sqlalchemy import create_engine
+import os.path
+from os import path
 
 
 default_args = {
@@ -73,6 +76,27 @@ def get_ticker_value(**kwargs):
 
     task_instance.xcom_push('response', to_python)
 
+def verify_folder(**kwargs):
+    task_name = kwargs['task_instance'].task_id.replace("folder_exists_", "")
+    ticker = task_name
+    path_name = ticker
+
+    if(path.exists('data/{}'.format(path_name))):
+        return "created_folder_" + ticker
+    else:
+        return "need_create_folder_" + ticker
+
+def get_create_folder(**kwargs):
+# Directory
+    directory = kwargs['symbol']
+# Parent Directory path
+    parent_dir = "data/"
+# Path
+    path = os.path.join(parent_dir, directory)
+
+    os.mkdir(path)
+
+
 def save_on_file(**kwargs):
     ticker = kwargs['symbol']
     data = kwargs['task_instance'].xcom_pull(task_ids='get_ticker_value_' + ticker, key='response')
@@ -104,6 +128,7 @@ def run_etl(**kwargs):
 task = {}
 save_file = {}
 run_etls = {}
+folder_exists = {}
 
 get_current_date = PythonOperator(
     task_id='get_current_date',
@@ -115,10 +140,41 @@ get_current_date = PythonOperator(
 
 for ticker in TICKERS:
     symbol = ticker['symbol']
+    need_create_folder = {}
+    created_folder = {}
+    create_folder = {}
+
+    need_create_folder[symbol] = DummyOperator(
+        task_id="need_create_folder_" + symbol,
+        trigger_rule='none_failed',
+        dag=dag
+    )
+
+    created_folder[symbol] = DummyOperator(
+        task_id="created_folder_" + symbol,
+        trigger_rule='none_failed',
+        dag=dag
+    )
 
     task[symbol] = PythonOperator(
         task_id='get_ticker_value_' + symbol,
         python_callable=get_ticker_value,
+        op_kwargs={'symbol': symbol},
+        provide_context=True,
+        dag=dag
+    )
+
+    folder_exists[symbol] = BranchPythonOperator(
+        task_id='folder_exists_' + symbol,
+        provide_context=True,
+        python_callable=verify_folder,
+        dag=dag
+    )
+
+
+    create_folder[symbol] = PythonOperator(
+        task_id='create_folder_' + symbol,
+        python_callable=get_create_folder,
         op_kwargs={'symbol': symbol},
         provide_context=True,
         dag=dag
@@ -141,5 +197,7 @@ for ticker in TICKERS:
     )
 
     get_current_date >> task[symbol]
-    task[symbol] >> save_file[symbol]
+    task[symbol] >> folder_exists[symbol]
+    folder_exists[symbol] >> need_create_folder[symbol] >> create_folder[symbol] >> created_folder[symbol] >> save_file[symbol]
+    folder_exists[symbol] >> created_folder[symbol] >> save_file[symbol]
     save_file[symbol] >> run_etls[symbol]
