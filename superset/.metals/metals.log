@@ -1,0 +1,4 @@
+[0m2021.10.15 14:23:06 INFO  Started: Metals version 0.10.7 in workspace '/Users/marcos.vieira/Projects/docker-airflow/superset' for client Visual Studio Code 1.61.0.[0m
+[0m2021.10.15 14:23:09 INFO  time: initialize in 3.03s[0m
+[0m2021.10.15 14:23:12 WARN  Build server is not auto-connectable.[0m
+[0m2021.10.15 14:23:12 WARN  no build tool detected in workspace '/Users/marcos.vieira/Projects/docker-airflow/superset'. The most common cause for this problem is that the editor was opened in the wrong working directory, for example if you use sbt then the workspace directory should contain build.sbt. [0m

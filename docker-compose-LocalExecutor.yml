@@ -11,10 +11,10 @@ services:
                 max-size: 10m
                 max-file: "3"
         ports:
-            - "5432:5432"
+            - "5433:5432"
 
     webserver:
-        image: puckel/docker-airflow:1.10.9
+        image: wuuker/docker-airflow:2.2.1
         restart: always
         depends_on:
             - postgres
@@ -30,7 +30,7 @@ services:
             - ./data:/usr/local/airflow/data/
             # - ./plugins:/usr/local/airflow/plugins
         ports:
-            - "8080:8080"
+            - "8082:8080"
         command: webserver
         healthcheck:
             test: ["CMD-SHELL", "[ -f /usr/local/airflow/airflow-webserver.pid ]"]

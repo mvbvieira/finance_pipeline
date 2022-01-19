@@ -67,7 +67,7 @@ def get_ticker_value(**kwargs):
 
     headers = {
         'x-rapidapi-host': "apidojo-yahoo-finance-v1.p.rapidapi.com",
-        'x-rapidapi-key': "5f6d8bca03msh0af0147edb4e25fp17865fjsneddfc6257ab1"
+        'x-rapidapi-key': os.environ.get('RAPID_API_TOKEN')
         }
 
     response = requests.request("GET", url, headers=headers, params=querystring)

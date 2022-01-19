@@ -25,3 +25,4 @@ sftp-config.json
 # Python
 __pycache__
 data/
+.env
